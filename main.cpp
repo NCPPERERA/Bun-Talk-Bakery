@@ -8,13 +8,19 @@
 #include<time.h>
 #include<windows.h>
 #include<conio.h>
+#include <ctime>
 
 using namespace std;
 
+string itemName;   // Add this line
+string currentUser = "";   // stores logged-in user
 char loc[20];
 char *date_time (); //set local date
 void page();    //first page
 void select();
+void adminPanel();
+void adminLogin();
+void resetPassword();
 void exit();    //exit from program
 void login();   //system login
 void registr();
@@ -28,6 +34,7 @@ void flow_1(char *ch);
 COORD coord = {0, 0};
 class date;
 class machine
+
 
 
 {
@@ -62,6 +69,16 @@ void gotoxy (int x, int y)	//defining/initializing to predefined objects
     coord.X = x;
     coord.Y = y; // X and Y coordinates
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+// helper to get current timestamp
+string getTimestamp() {
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    char buf[30];
+    sprintf(buf, "%02d-%02d-%04d_%02d%02d%02d",
+            ltm->tm_mday, ltm->tm_mon+1, 1900+ltm->tm_year,
+            ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+    return string(buf);
 }
 void frame()
 {
@@ -140,12 +157,19 @@ void scroll_note()	//welcome note
     gotoxy(37,10);
     cout<<"2.REGISTER"<<endl;
 
+
+
+
     gotoxy(29,13);
     cout<<"3.FORGOT PASSWORD / USERNAME"<<endl;
     gotoxy(39,16);
     cout<<"4.HELP"<<endl;
     gotoxy(70,20);
-    cout<<"5.EXIT"<<endl;
+    cout<<"6.EXIT"<<endl;
+    gotoxy(35,19);
+    cout << "5.ADMIN LOGIN"<<endl;
+
+
     gotoxy(2,23);
     cout<<"ENTER:- ";
     cin>>choice;
@@ -165,9 +189,16 @@ void scroll_note()	//welcome note
     case 4:
         help();
         break;
-    case 5://exit
+
+    case 5:
+        adminLogin();
+        break;
+    case 6://exit
         exit();
         break;
+
+
+
     default:
         system("cls");
         for(int i=0;i<25;i++)
@@ -188,81 +219,75 @@ void scroll_note()	//welcome note
     }while (choice != 5);
 
 }
-void login(){
+void login() {
     system("COLOR 90");
     system("cls");
     frame();
-    int count;
-    string user,pass,u,p;
+    int count = 0;
+    string user, pass, u, p;
 
-     gotoxy(35,3);
-     cout<<"SIGN IN"<<endl;
-     gotoxy(8,7);
-     cout<<"USERNAME :";
-     cin>>user;
-     gotoxy(8,10);
-     cout<<"PASSWORD :";
-     cin>>pass;
+    gotoxy(35,3);
+    cout << "SIGN IN" << endl;
+    gotoxy(8,7);
+    cout << "USERNAME :";
+    cin >> user;
+    gotoxy(8,10);
+    cout << "PASSWORD :";
+    cin >> pass;
 
-     ifstream input ("database.txt");
-     while(input>>u>>p)
-     {
-         if(u==user && p==pass)
-         {
-             count=1;
-             system("cls");
-         }
-     }
-     input.close();
-     if(count==1)
-     {
-         system("cls");
-         	for(int i=0;i<25;i++)
-	{
-		gotoxy(4,i);
-		cout<<"|";
-		gotoxy(80,i);
-		cout<<"|";
-	}
-         gotoxy(35,10);
-         cout<<"Loading";
-         gotoxy(42,10);
-         flow_1("......!");
-         gotoxy(36,13);
-         cout<<"Hello "<<user;
-         gotoxy(33,14);
-         cout<<"LOGIN SUCCSESSFUL";
-         cin.get();
-         getch();
-         select();
+    ifstream input("database.txt");
+    while (input >> u >> p) {
+        if (u == user && p == pass) {
+            count = 1;
+            currentUser = user;   // store logged-in user globally
+            system("cls");
+        }
+    }
+    input.close();
 
-     }
-     else
-     {
+    if (count == 1) {
         system("cls");
-        	for(int i=0;i<25;i++)
-	{
-		gotoxy(4,i);
-		cout<<"|";
-		gotoxy(80,i);
-		cout<<"|";
-	}
+        for (int i = 0; i < 25; i++) {
+            gotoxy(4, i);
+            cout << "|";
+            gotoxy(80, i);
+            cout << "|";
+        }
         gotoxy(35,10);
-        cout<<"Loading";
+        cout << "Loading";
+        gotoxy(42,10);
+        flow_1("......!");
+        gotoxy(36,13);
+        cout << "Hello " << currentUser;
+        gotoxy(33,14);
+        cout << "LOGIN SUCCESSFUL";
+        cin.get();
+        getch();
+        select();   // go to main menu
+    }
+    else {
+        system("cls");
+        for (int i = 0; i < 25; i++) {
+            gotoxy(4, i);
+            cout << "|";
+            gotoxy(80, i);
+            cout << "|";
+        }
+        gotoxy(35,10);
+        cout << "Loading";
         gotoxy(42,10);
         flow_1("......!");
 
         gotoxy(6,12);
-        cout<<"ERROR !";
+        cout << "ERROR !";
         gotoxy(6,13);
-        cout<<"YOUR USERNAME OR PASSWORD IS INVALIED";
+        cout << "YOUR USERNAME OR PASSWORD IS INVALID";
         cin.get();
         getch();
         page();
+    }
+}
 
-     }
-
- }
  void registr()		//create account for log to bun talk bakery service
 {
     system("COLOR C0");
@@ -493,6 +518,52 @@ void forgot()
         forgot();
     }
  }
+
+
+void resetPassword() {
+    system("cls");
+    string oldPass, newPass, u, p;
+    int found = 0;
+
+    gotoxy(10,5);
+    cout << "Enter old password: ";
+    cin >> oldPass;
+
+    fstream file("database.txt");
+    vector<pair<string,string>> records;
+    while (file >> u >> p) {
+        if (u == currentUser && p == oldPass) {
+            found = 1;
+            gotoxy(10,7);
+            cout << "Enter new password: ";
+            cin >> newPass;
+            records.push_back({u, newPass});
+        } else {
+            records.push_back({u, p});
+        }
+    }
+    file.close();
+
+    if (found) {
+        ofstream out("database.txt");
+        for (auto &rec : records) {
+            out << rec.first << " " << rec.second << "\n";
+        }
+        out.close();
+        gotoxy(10,9);
+        cout << "Password changed successfully!";
+    } else {
+        gotoxy(10,9);
+        cout << "Old password incorrect!";
+    }
+    getch();
+    select();
+}
+
+
+
+
+
  void help()
  {
      {
@@ -541,59 +612,56 @@ void forgot()
 }
 }
 
-void select()
- {
+void select() {
     system("COLOR A0");
     system("cls");
     frame();
     int ab;
     gotoxy(30,3);
-    cout<<"WELCOME TO BUN TALK BAKERY!" << endl;
+    cout << "WELCOME TO BUN TALK BAKERY, " << currentUser << "!" << endl;
     gotoxy(36,7);
     cout << "1. SHOW MENU" << endl;
-    gotoxy(37,10);
-    cout << "2. LOGOUT" << endl;
-    gotoxy(38,13);
-    cout << "3. EXIT" << endl;
+    gotoxy(36,10);
+    cout << "2. RESET PASSWORD" << endl;
+    gotoxy(36,13);
+    cout << "3. LOGOUT" << endl;
+    gotoxy(36,16);
+    cout << "4. EXIT" << endl;
     gotoxy(2,23);
     cout << "Enter your choice: ";
-
     cin >> ab;
-    switch(ab)
-    {
-    case 1 :
-        {
+
+    switch (ab) {
+        case 1:
             item();
             break;
-        }
-    case 2 :
-        {
+        case 2:
+            resetPassword();
+            break;
+        case 3:
             page();
             break;
-        }
-
-    case 3:{
+        case 4:
             exit();
             break;
+        default:
+            system("cls");
+            for (int i = 0; i < 25; i++) {
+                gotoxy(4, i);
+                cout << "|";
+                gotoxy(80, i);
+                cout << "|";
             }
-          default:
-        system("cls");
-        for(int i=0;i<25;i++)
-	{
-		gotoxy(4,i);
-		cout<<"|";
-		gotoxy(80,i);
-		cout<<"|";
-	}
-        gotoxy(6,3);
-        flow("PLEASE ENTER VALIED NUMBER");
-        gotoxy(6,6);
-        flow("TRY AGAIN...");
-        cin.get();
-        getch();
-        select();
+            gotoxy(6,3);
+            flow("PLEASE ENTER VALID NUMBER");
+            gotoxy(6,6);
+            flow("TRY AGAIN...");
+            cin.get();
+            getch();
+            select();
     }
 }
+
 void exit()
 {
     system("COLOR 40");
@@ -616,20 +684,29 @@ void exit()
         getch();
         exit(0);
 }
+struct OrderItem {
+    string name;  // item name
+    int qty;      // quantity
+    float amt;    // total amount for this item (price * qty)
+};
 
-void item() //if user login success then show this menu
-            //display the menu and get user's item choice
-{
+
+void item() {
     system("COLOR 1E");
     system("cls");
-    int code,qty;
-    float price,amt,totalAmt, cash, change;
+    int code, qty;
+    float price = 0, amt, totalAmt = 0, cash, change;
     char addAnother;
 
+    vector<OrderItem> items;
+
+
     do {
-            system("cls");
-            gotoxy(40,1);
-            printf("MENU");
+
+        system("cls");
+        gotoxy(40,1);
+        cout << "MENU";
+
             gotoxy(12,4);
             printf("BAKED GOODS");
             gotoxy(3,6);
@@ -672,72 +749,289 @@ void item() //if user login success then show this menu
             gotoxy(51,12);
             printf("16.\tCAPPUCCINO \t\t RS. 600.00\n");
 
-    printf("\n\n\n\n\n\tENTER CODE\t: ");
-    scanf ("%d", &code);
+        gotoxy(3,21);
+        cout << "ENTER CODE: ";
+        cin >> code;
+        gotoxy(3,22);
+        cout << "ENTER QUANTITY: ";
+        cin >> qty;
 
-    printf("\n\tENTER QUANTITY\t:");
-    scanf("%d",&qty);
+        switch (code) {
+            case 1: price = 250; itemName = "Burger"; break;
 
-    switch (code){
-    case 1: price = 250.00;
-    break;
-    case 2: price = 120.00;
-    break;
-    case 3: price = 80.00;
-    break;
-    case 4: price = 120.00;
-    break;
-    case 5: price = 130.00;
-    break;
-    case 6: price = 90.00;
-    break;
-    case 7: price = 110.00;
-    break;
-    case 8: price = 130.00;
-    break;
-    case 9: price = 930.00;
-    break;
-    case 10: price = 1100.00;
-    break;
-    case 11: price = 350.00;
-    break;
-    case 12: price = 600.00;
-    break;
-    case 13: price = 500.00;
-    break;
-    case 14: price = 900.00;
-    break;
-    case 15: price = 350.00;
-    break;
-    case 16: price = 600.00;
-    break;
+            case 2: price = 120; itemName = "Chicken Rolls"; break;
+            case 3: price = 80;  itemName="Fish Bun"; break;
+            case 4: price = 120; itemName="Egg Bun"; break;
+            case 5: price = 130; itemName="Breads"; break;
+            case 6: price = 90;  itemName="Egg Pastry"; break;
+            case 7: price = 110; itemName="Fish Pastry"; break;
+            case 8: price = 130; itemName="Chicken Pastry"; break;
+            case 9: price = 930; itemName="Butter Cake 1Kg"; break;
+            case 10: price = 1100; itemName="Chocolate Cake 1Kg"; break;
+            case 11: price = 350; itemName="Chocolate Milk Shake"; break;
+            case 12: price = 600; itemName="Latte"; break;
+            case 13: price = 500; itemName="Americano"; break;
+            case 14: price = 900; itemName="Ice Kit Kat"; break;
+            case 15: price = 350; itemName = "Black Tea"; break;
+            case 16: price = 600; itemName = "Cappuccino"; break;
+            default: price = 0; break;
+        }
 
+         amt = price * qty;
+        totalAmt += amt;
+
+        // Add item to order
+        items.push_back({itemName, qty, amt});
+
+        gotoxy(3,23);
+        cout << "ADD ANOTHER ORDER (Y/N)? : ";
+        addAnother = getch();
+
+    } while(addAnother == 'y' || addAnother == 'Y');
+
+    // Show total before payment
+    system("cls");
+    cout << "\n\n\n";
+    cout << "-------------------------------------------\n";
+    cout << "             ORDER SUMMARY\n";
+    cout << "-------------------------------------------\n";
+    cout << left << setw(20) << "ITEM" << setw(10) << "QTY" << setw(10) << "AMOUNT\n\n";
+    cout << "--------------------------------------\n";
+    for (auto &it : items) {
+        cout << left << setw(20) << it.name
+             << setw(10) << it.qty
+             << "Rs. " << fixed << setprecision(2) << it.amt << "\n";
     }
-    amt = price * qty;
-    gotoxy(3,21);
-    printf("\n\tAMOUNT\t\t: %.2f",amt);
+    cout << "--------------------------------------\n";
+    cout << "TOTAL AMOUNT: Rs. " << totalAmt << "\n";
 
-    totalAmt = totalAmt + amt;
-    gotoxy(3,22);
-    printf("\n\tTOTAL AMOUNT\t: %.2f", totalAmt);
-    gotoxy(3,23);
-    printf("\n\tADD ANOTHER ORDER(Y/N)? :");
-    addAnother = getch();
+    // Accept cash
+    do {
+        cout << "CASH: Rs. ";
+        cin >> cash;
+        if (cash < totalAmt) {
+            cout << "Insufficient cash! Please enter again.\n";
+        }
+    } while(cash < totalAmt);
 
-    }while (addAnother == 'y'|| addAnother == 'Y');
+    change = cash - totalAmt;
 
-            do {
-                printf("\n\tCASH\t: ");
-                scanf("%f", &cash);
-                }
-            while(cash < totalAmt);
+    // Generate digital receipt
+    string filename = "receipt_" + currentUser + "_" + getTimestamp() + ".txt";
+    ofstream receipt(filename);
+    receipt << "--------------------------------------------\n";
+    receipt << "             BUN TALK BAKERY\n";
+    receipt << "--------------------------------------------\n";
+    receipt << "Date: " << getTimestamp() << "\n";
+    receipt << "Customer: " << currentUser << "\n\n";
+    receipt << left << setw(20) << "Item" << setw(10) << "Qty" << setw(10) << "Amount\n\n";
+    receipt << "------------------------------------------\n";
+    for (auto &it : items) {
+        receipt << left << setw(20) << it.name
+                << setw(10) << it.qty
+                << "Rs. " << fixed << setprecision(2) << it.amt << "\n";
+    }
+    receipt << "--------------------------------------------\n";
+    receipt << "                    TOTAL   : Rs. " << totalAmt << "\n";
+    receipt << "                    CASH    : Rs. " << cash << "\n";
+    receipt << "                    CHANGE  : Rs.- " << change << "\n";
+    receipt << "--------------------------------------------\n";
+    receipt << "               WELCOM AGAIN\n";
+    receipt << "     Thank you for shopping with us!\n";
+    receipt << "--------------------------------------------\n";
+    receipt.close();
 
-            change = cash - totalAmt;
-            printf("\n\tCHANGE\t: %.2f",change);
-            cin.get();
-            getch();
-            select();
+    // Print receipt on screen
+    system("cls");
+    cout << "Receipt saved as: " << filename << "\n";
+    ifstream bill(filename);
+    string line;
+    while(getline(bill, line)) cout << line << endl;
+    bill.close();
+
+    getch();
+    select(); // Return to main menu
 }
+
+
+
+void adminLogin() {
+    system("cls");
+    system("COLOR 0A");
+    frame();
+
+    string adminUser, adminPass;
+    string correctUser = "admin";   // You can set/change
+    string correctPass = "1234";    // You can set/change
+
+    gotoxy(35,3);
+    cout << "ADMIN LOGIN";
+    gotoxy(10,7);
+    cout << "Username: ";
+    cin >> adminUser;
+    gotoxy(10,10);
+    cout << "Password: ";
+    cin >> adminPass;
+
+    if (adminUser == correctUser && adminPass == correctPass) {
+        gotoxy(25,15);
+        cout << "Login Successful!";
+        Sleep(1500);
+        adminPanel();
+    } else {
+        gotoxy(20,15);
+        cout << "Invalid Admin Credentials!";
+        getch();
+        page(); // go back to main menu
+    }
+}
+
+void viewUsers() {
+    system("cls");
+    frame();
+    ifstream in("database.txt");
+    string u, p;
+    gotoxy(32,3);
+    cout << "USER LIST\n\n"<<endl;
+    while (in >> u >> p) {
+        cout << "       Username: " << u << "      |     Password: " << p << endl;
+    }
+    in.close();
+    getch();
+    adminPanel();
+}
+
+void addUser() {
+    system("cls");
+    frame();
+    string u, p;
+    gotoxy(10,7);
+    cout << "Enter new username: ";
+    cin >> u;
+    gotoxy (10,9);
+    cout << "Enter password: ";
+    cin >> p;
+
+    ofstream out("database.txt", ios::app);
+    out << u << " " << p << endl;
+    out.close();
+
+    gotoxy (25,13);
+    cout << "User added successfully!\n";
+    getch();
+    adminPanel();
+}
+
+void editUser() {
+    system("cls");
+    string searchUser, u, p;
+    vector<pair<string,string>> users;
+    bool found = false;
+
+    gotoxy(10,7);
+    cout << "Enter username to edit: ";
+    cin >> searchUser;
+
+    ifstream in("database.txt");
+    while (in >> u >> p) {
+        if (u == searchUser) {
+            found = true;
+             gotoxy(13,11);
+            cout << "Enter new username: ";
+            cin >> u;
+             gotoxy(13,13);
+            cout << "Enter new password: ";
+            cin >> p;
+        }
+        users.push_back({u,p});
+    }
+    in.close();
+
+    if (found) {
+        ofstream out("database.txt");
+        for (auto &usr : users) {
+            out << usr.first << " " << usr.second << endl;
+        }
+        out.close();
+         gotoxy(25,15);
+        cout << "User updated successfully!\n";
+    } else {
+         gotoxy(25,15);
+        cout << "User not found!\n";
+    }
+
+    getch();
+    adminPanel();
+}
+
+void deleteUser() {
+    system("cls");
+    string searchUser, u, p;
+    vector<pair<string,string>> users;
+    bool found = false;
+
+     gotoxy(10,7);
+    cout << "Enter username to delete: ";
+    cin >> searchUser;
+
+    ifstream in("database.txt");
+    while (in >> u >> p) {
+        if (u == searchUser) {
+            found = true;
+            continue; // skip this user
+        }
+        users.push_back({u,p});
+    }
+    in.close();
+
+    if (found) {
+        ofstream out("database.txt");
+        for (auto &usr : users) {
+            out << usr.first << " " << usr.second << endl;
+        }
+        out.close();
+         gotoxy(25,13);
+        cout << "User deleted successfully!\n";
+    } else {
+         gotoxy(25,15);
+        cout << "User not found!\n";
+    }
+
+    getch();
+    adminPanel();
+}
+
+void adminPanel() {
+    system("cls");
+    frame();
+    int choice;
+   gotoxy(32,3);
+    cout<<"WELCOME TO ADMIN PANEL";
+    gotoxy(38,7);
+    cout << "1. VIEW USERS"<<endl;
+    gotoxy(37,10);
+    cout << "2. EDITE USER"<<endl;
+    gotoxy(37,13);
+    cout << "3. DELETE USER"<<endl;
+    gotoxy(37,16);
+    cout << "4. ADD USER"<<endl;
+    gotoxy(37,19);
+    cout << "5. LOGOUT"<<endl;
+    gotoxy(2,23);
+    cout<<"ENTER:- ";
+    cin >> choice;
+
+    switch(choice) {
+        case 1: viewUsers(); break;
+        case 2: editUser(); break;
+        case 3: deleteUser(); break;
+        case 4: addUser(); break;
+        case 5: page(); break;
+        default: cout << "Invalid choice!"; getch(); adminPanel();
+    }
+}
+
+
 
 int main()
 {
