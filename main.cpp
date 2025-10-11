@@ -9,16 +9,52 @@
 #include<windows.h>
 #include<conio.h>
 #include <ctime>
+#include <sstream>
 
 using namespace std;
 
-string itemName;   // Add this line
-string currentUser = "";   // stores logged-in user
+
+string itemName;
+string currentUser = "";
 char loc[20];
+
+// ========== STRUCTS & DATA ==========
+struct StockItem {
+    int code;      // item code
+    string name;   // item name
+    float price;   // price
+    int qty;       // quantity
+};
+
+// ===== Functions to load/save stock =====
+vector<StockItem> loadStock() {
+    vector<StockItem> items;
+    ifstream in("stock.txt");
+    if (!in) return items;
+    StockItem s;
+    while (in >> s.code >> s.name >> s.price >> s.qty) {
+        items.push_back(s);
+    }
+    return items;
+}
+
+void saveStock(const vector<StockItem>& items) {
+    ofstream out("stock.txt");
+    for (const auto &it : items) {
+        out << it.code << " " << it.name << " "
+            << it.price << " " << it.qty << "\n";
+    }
+}
+
+
+
+
 char *date_time (); //set local date
 void page();    //first page
 void select();
 void adminPanel();
+void stockManagementMenu();
+void userManagementMenu();
 void adminLogin();
 void resetPassword();
 void exit();    //exit from program
@@ -694,110 +730,103 @@ struct OrderItem {
 void item() {
     system("COLOR 1E");
     system("cls");
+
     int code, qty;
-    float price = 0, amt, totalAmt = 0, cash, change;
+    float amt, totalAmt = 0, cash, change;
     char addAnother;
+    vector<OrderItem> orderItems;
 
-    vector<OrderItem> items;
-
+    // ⭐ Load stock once at start
+    vector<StockItem> stock = loadStock();
 
     do {
-
         system("cls");
         gotoxy(40,1);
-        cout << "MENU";
+        cout << "MENU\n";
 
-            gotoxy(12,4);
-            printf("BAKED GOODS");
-            gotoxy(3,6);
-            printf("CODE\t  ITEM\t\t    PRICE");
-            gotoxy(4,7);
-            printf("1.\tBURGER \t\t    RS. 250.00");
-            gotoxy(4,8);
-            printf("2.\tCHICKEN ROLLS \t    RS. 120.00\n" );
-            gotoxy(4,9);
-            printf("3.\tFISH BUN \t    RS.  80.00");
-            gotoxy(4,10);
-            printf("4.\tEGG BUN \t    RS. 120.00");
-            gotoxy(4,11);
-            printf("5.\tBREADS \t\t    RS. 130.00");
-            gotoxy(4,12);
-            printf("6.\tEGG PASTRY \t    RS.  90.00");
-            gotoxy(4,13);
-            printf("7.\tFISH PASTRY \t    RS. 110.00");
-            gotoxy(4,14);
-            printf("8.\tCHICKEN PASTRY \t    RS. 130.00");
-            gotoxy(4,15);
-            printf("9.\tBUTTER CAKE 1Kg     RS. 930.00");
-            gotoxy(4,16);
-            printf("10.\tCHOCOLATE CAKE 1Kg  RS.1100.00");
+        // Print stock
+        gotoxy(3,4);
+        cout << left << setw(10) << "CODE"
+             << setw(25) << "ITEM"
+             << setw(10) << "PRICE"
+             << setw(10) << "QTY\n";
+        cout << "---------------------------------------------------\n";
 
-            gotoxy(65,4);
-            printf("BEVERAGES");
-            gotoxy(50,6);
-            printf("CODE\t  ITEM\t\t\t    PRICE");
-            gotoxy(51,7);
-            printf("11.\tCHOCOLATE MILK SHAKE \t RS. 350.00");
-            gotoxy(51,8);
-            printf("12.\tLATTE \t\t\t RS. 600.00");
-            gotoxy(51,9);
-            printf("13.\tAMERICANO \t\t RS. 500.00");
-            gotoxy(51,10);
-            printf("14.\tICE KIT KAT \t\t RS. 900.00");
-            gotoxy(51,11);
-            printf("15.\tBLACK TEA \t\t RS. 350.00");
-            gotoxy(51,12);
-            printf("16.\tCAPPUCCINO \t\t RS. 600.00\n");
 
-        gotoxy(3,21);
+       for (auto &s : stock) {
+    cout << left
+         << setw(10) << s.code
+         << setw(25) << s.name
+         << setw(12) << ("Rs. " + to_string((int)s.price))  // extra width for spacing
+         << setw(10) << s.qty
+         << endl;
+}
+
+
+        // Customer selects item
+        gotoxy(3,23);
         cout << "ENTER CODE: ";
         cin >> code;
-        gotoxy(3,22);
+        gotoxy(3,24);
         cout << "ENTER QUANTITY: ";
         cin >> qty;
 
-        switch (code) {
-            case 1: price = 250; itemName = "Burger"; break;
+        // Find item in stock
+        string itemName = "";
+        float price = 0;
+        bool found = false;
 
-            case 2: price = 120; itemName = "Chicken Rolls"; break;
-            case 3: price = 80;  itemName="Fish Bun"; break;
-            case 4: price = 120; itemName="Egg Bun"; break;
-            case 5: price = 130; itemName="Breads"; break;
-            case 6: price = 90;  itemName="Egg Pastry"; break;
-            case 7: price = 110; itemName="Fish Pastry"; break;
-            case 8: price = 130; itemName="Chicken Pastry"; break;
-            case 9: price = 930; itemName="Butter Cake 1Kg"; break;
-            case 10: price = 1100; itemName="Chocolate Cake 1Kg"; break;
-            case 11: price = 350; itemName="Chocolate Milk Shake"; break;
-            case 12: price = 600; itemName="Latte"; break;
-            case 13: price = 500; itemName="Americano"; break;
-            case 14: price = 900; itemName="Ice Kit Kat"; break;
-            case 15: price = 350; itemName = "Black Tea"; break;
-            case 16: price = 600; itemName = "Cappuccino"; break;
-            default: price = 0; break;
+        for (auto &s : stock) {
+            if (s.code == code) {
+                found = true;
+                itemName = s.name;
+                price = s.price;
+
+                if (s.qty >= qty) {
+                    // ⭐ Reduce stock
+                    s.qty -= qty;
+
+                    amt = price * qty;
+                    totalAmt += amt;
+                    orderItems.push_back({itemName, qty, amt});
+
+                    gotoxy(3,23);
+                    cout << "Added " << qty << " x " << itemName
+                         << " = Rs. " << amt;
+                } else {
+                    gotoxy(3,23);
+                    cout << "Not enough stock! Only " << s.qty << " left.";
+                }
+                break;
+            }
         }
 
-         amt = price * qty;
-        totalAmt += amt;
+        if (!found) {
+            gotoxy(3,23);
+            cout << "Invalid code! Try again.";
+            getch();
+        }
 
-        // Add item to order
-        items.push_back({itemName, qty, amt});
-
-        gotoxy(3,23);
+        gotoxy(3,24);
         cout << "ADD ANOTHER ORDER (Y/N)? : ";
         addAnother = getch();
 
     } while(addAnother == 'y' || addAnother == 'Y');
 
-    // Show total before payment
+    // ⭐ Save updated stock back to file
+    saveStock(stock);
+
+    // Show receipt
     system("cls");
     cout << "\n\n\n";
     cout << "-------------------------------------------\n";
     cout << "             ORDER SUMMARY\n";
     cout << "-------------------------------------------\n";
-    cout << left << setw(20) << "ITEM" << setw(10) << "QTY" << setw(10) << "AMOUNT\n\n";
+    cout << left << setw(20) << "ITEM"
+         << setw(10) << "QTY"
+         << setw(10) << "AMOUNT\n\n";
     cout << "--------------------------------------\n";
-    for (auto &it : items) {
+    for (auto &it : orderItems) {
         cout << left << setw(20) << it.name
              << setw(10) << it.qty
              << "Rs. " << fixed << setprecision(2) << it.amt << "\n";
@@ -816,7 +845,7 @@ void item() {
 
     change = cash - totalAmt;
 
-    // Generate digital receipt
+    // Save digital receipt
     string filename = "receipt_" + currentUser + "_" + getTimestamp() + ".txt";
     ofstream receipt(filename);
     receipt << "--------------------------------------------\n";
@@ -824,9 +853,11 @@ void item() {
     receipt << "--------------------------------------------\n";
     receipt << "Date: " << getTimestamp() << "\n";
     receipt << "Customer: " << currentUser << "\n\n";
-    receipt << left << setw(20) << "Item" << setw(10) << "Qty" << setw(10) << "Amount\n\n";
+    receipt << left << setw(20) << "Item"
+            << setw(10) << "Qty"
+            << setw(10) << "Amount\n\n";
     receipt << "------------------------------------------\n";
-    for (auto &it : items) {
+    for (auto &it : orderItems) {
         receipt << left << setw(20) << it.name
                 << setw(10) << it.qty
                 << "Rs. " << fixed << setprecision(2) << it.amt << "\n";
@@ -836,7 +867,7 @@ void item() {
     receipt << "                    CASH    : Rs. " << cash << "\n";
     receipt << "                    CHANGE  : Rs.- " << change << "\n";
     receipt << "--------------------------------------------\n";
-    receipt << "               WELCOM AGAIN\n";
+    receipt << "               WELCOME AGAIN\n";
     receipt << "     Thank you for shopping with us!\n";
     receipt << "--------------------------------------------\n";
     receipt.close();
@@ -852,6 +883,7 @@ void item() {
     getch();
     select(); // Return to main menu
 }
+
 
 
 
@@ -876,7 +908,7 @@ void adminLogin() {
     if (adminUser == correctUser && adminPass == correctPass) {
         gotoxy(25,15);
         cout << "Login Successful!";
-        Sleep(1500);
+        Sleep(1200);
         adminPanel();
     } else {
         gotoxy(20,15);
@@ -897,8 +929,10 @@ void viewUsers() {
         cout << "       Username: " << u << "      |     Password: " << p << endl;
     }
     in.close();
+    gotoxy(2,23);
+    cout<<"PRESS ENTER TO RETURN";
     getch();
-    adminPanel();
+    userManagementMenu();
 }
 
 void addUser() {
@@ -919,7 +953,7 @@ void addUser() {
     gotoxy (25,13);
     cout << "User added successfully!\n";
     getch();
-    adminPanel();
+    userManagementMenu();
 }
 
 void editUser() {
@@ -961,7 +995,7 @@ void editUser() {
     }
 
     getch();
-    adminPanel();
+    userManagementMenu();
 }
 
 void deleteUser() {
@@ -998,6 +1032,234 @@ void deleteUser() {
     }
 
     getch();
+    userManagementMenu();
+}
+
+
+
+// ====== USER MANAGEMENT MENU ======
+void userManagementMenu() {
+    system("cls");
+    frame();
+    int choice;
+    gotoxy(32,3);
+    cout<<"USER MANAGEMENT";
+    gotoxy(38,7);  cout << "1. VIEW USERS"<<endl;
+    gotoxy(38,10); cout << "2. ADD USER"<<endl;
+    gotoxy(38,13); cout << "3. EDIT USER"<<endl;
+    gotoxy(38,16); cout << "4. DELETE USER"<<endl;
+    gotoxy(38,19); cout << "5. BACK"<<endl;
+    gotoxy(2,23);
+    cout<<"ENTER:- ";
+    cin >> choice;
+
+    switch(choice) {
+        case 1: viewUsers(); break;
+        case 2: addUser(); break;
+        case 3: editUser(); break;
+        case 4: deleteUser(); break;
+        case 5: adminPanel(); break;
+        default: cout<<"Invalid choice!"; getch(); userManagementMenu();
+    }
+}
+
+// ====== STOCK MANAGEMENT FUNCTIONS ======
+void viewStock() {
+    system("cls");
+    //frame();
+    ifstream in("stock.txt");
+    StockItem s;
+    gotoxy(28,3);
+    cout << "STOCK LIST\n\n";
+    cout << left << setw(10) << "Code"
+         << setw(20) << "Item"
+         << setw(12) << "Price"
+         << setw(10) << "Qty\n";
+    gotoxy(0,5);
+    cout << "----------------------------------------------------------\n";
+    while (in >> s.code >> s.name >> s.price >> s.qty) {
+        cout << left
+             << setw(10) << s.code
+             << setw(20) << s.name
+             << setw(12) << ("Rs. " + to_string((int)s.price))  // price with spacing
+             << setw(10) << s.qty  // quantity column properly spaced
+             << "\n";
+    }
+    in.close();
+    getch();
+    stockManagementMenu();
+}
+
+void addStock() {
+    system("cls");
+    frame();
+
+    char choice;
+    gotoxy(10,8);
+    cout << "[A] Add New Item";
+    gotoxy(50,8);
+    cout << "[B] Back";
+
+    gotoxy(10,12);
+    cout << "Choose Option (A/B): ";
+    cin >> choice;
+
+    if (choice == 'b' || choice == 'B') {
+        stockManagementMenu(); // Go back without adding
+        return;
+    }
+
+    // Continue to add new item
+    StockItem s;
+    gotoxy(10,10); cout << "Enter item code: "; cin >> s.code;
+    gotoxy(10,12); cout << "Enter item name: "; cin >> s.name;
+    gotoxy(10,14); cout << "Enter price: "; cin >> s.price;
+    gotoxy(10,16); cout << "Enter quantity: "; cin >> s.qty;
+
+    ofstream out("stock.txt", ios::app);
+    out << s.code << " " << s.name << " " << s.price << " " << s.qty << endl;
+    out.close();
+
+    gotoxy(25,18);
+    cout << "Item added successfully!\n";
+    gotoxy(25,20);
+    cout << "Press any key to return...";
+    getch();
+
+    stockManagementMenu(); // Return to stock menu
+}
+
+
+void editStock() {
+    system("cls");
+    frame();
+
+    char choice;
+    gotoxy(10,6);
+    cout << "[E] Edit Item";
+    gotoxy(30,6);
+    cout << "[B] Back ";
+
+    gotoxy(10,8);
+    cout << "Choose Option (E/B): ";
+    cin >> choice;
+
+    if (choice == 'b' || choice == 'B') {
+        stockManagementMenu(); // Back to stock menu
+        return;
+    }
+
+    // Continue with editing
+    int searchCode;
+    gotoxy(10,10); cout << "Enter item code to edit: "; cin >> searchCode;
+
+    ifstream in("stock.txt");
+    vector<StockItem> items;
+    StockItem s;
+    bool found = false;
+    while (in >> s.code >> s.name >> s.price >> s.qty) {
+        if (s.code == searchCode) {
+            found = true;
+            gotoxy(10,12); cout << "Enter new name: "; cin >> s.name;
+            gotoxy(10,14); cout << "Enter new price: "; cin >> s.price;
+            gotoxy(10,16); cout << "Enter new quantity: "; cin >> s.qty;
+        }
+        items.push_back(s);
+    }
+    in.close();
+
+    if (found) {
+        ofstream out("stock.txt");
+        for (auto &it : items)
+            out << it.code << " " << it.name << " "
+                << it.price << " " << it.qty << endl;
+        out.close();
+        gotoxy(25,18); cout << "Item updated successfully!\n";
+    } else {
+        gotoxy(25,18); cout << "Item not found!\n";
+    }
+
+    gotoxy(25,20);
+    cout << "Press any key to return...";
+    getch();
+    stockManagementMenu();
+}
+
+
+void deleteStock() {
+    system("cls");
+    frame();
+    int searchCode;
+    gotoxy(10,7); cout << "Enter item code to delete: "; cin >> searchCode;
+
+    ifstream in("stock.txt");
+    vector<StockItem> items;
+    StockItem s;
+    bool found = false;
+    while (in >> s.code >> s.name >> s.price >> s.qty) {
+        if (s.code == searchCode) {
+            found = true;
+            continue; // skip this item
+        }
+        items.push_back(s);
+    }
+    in.close();
+
+    if (found) {
+        ofstream out("stock.txt");
+        for (auto &it : items)
+            out << it.code << " " << it.name << " "
+                << it.price << " " << it.qty << endl;
+        out.close();
+        gotoxy(25,13); cout << "Stock deleted!\n";
+    } else {
+        gotoxy(25,13); cout << "Item not found!\n";
+    }
+
+    getch();
+    stockManagementMenu();
+}
+
+
+// ====== STOCK MANAGEMENT MENU ======
+void stockManagementMenu() {
+    system("cls");
+    frame();
+    int choice;
+    gotoxy(32,3);
+    cout<<"STOCK MANAGEMENT";
+    gotoxy(38,7);  cout << "1. VIEW STOCK"<<endl;
+    gotoxy(38,10); cout << "2. ADD STOCK"<<endl;
+    gotoxy(38,13); cout << "3. EDIT STOCK"<<endl;
+    gotoxy(38,16); cout << "4. DELETE STOCK"<<endl;
+    gotoxy(38,19); cout << "5. BACK"<<endl;
+    gotoxy(2,23);
+    cout<<"ENTER:- ";
+    cin >> choice;
+
+    switch(choice) {
+        case 1: viewStock(); break;
+        case 2: addStock(); break;
+        case 3: editStock(); break;
+        case 4: deleteStock(); break;
+        case 5: adminPanel(); break;
+        default: cout<<"Invalid choice!"; getch(); stockManagementMenu();
+    }
+}
+
+// ====== ADMIN PROFILE ======
+void adminProfile() {
+    system("cls");
+    frame();
+    gotoxy(32,3);
+    cout<<"ADMIN PROFILE";
+    gotoxy(10,7);
+    cout<<"Username: admin";
+    gotoxy(10,9);
+    cout<<"Email: admin@buntalk.com";
+    gotoxy(10,11);
+    cout<<"(Future: add change password here)";
+    getch();
     adminPanel();
 }
 
@@ -1005,32 +1267,24 @@ void adminPanel() {
     system("cls");
     frame();
     int choice;
-   gotoxy(32,3);
-    cout<<"WELCOME TO ADMIN PANEL";
-    gotoxy(38,7);
-    cout << "1. VIEW USERS"<<endl;
-    gotoxy(37,10);
-    cout << "2. EDITE USER"<<endl;
-    gotoxy(37,13);
-    cout << "3. DELETE USER"<<endl;
-    gotoxy(37,16);
-    cout << "4. ADD USER"<<endl;
-    gotoxy(37,19);
-    cout << "5. LOGOUT"<<endl;
+    gotoxy(32,3);
+    cout<<"WELCOME TO ADMIN HOME";
+    gotoxy(35,7);  cout << "1. USER MANAGEMENT"<<endl;
+    gotoxy(35,10); cout << "2. STOCK MANAGEMENT"<<endl;
+    gotoxy(35,13); cout << "3. ADMIN PROFILE"<<endl;
+    gotoxy(35,16); cout << "4. LOGOUT"<<endl;
     gotoxy(2,23);
     cout<<"ENTER:- ";
     cin >> choice;
 
     switch(choice) {
-        case 1: viewUsers(); break;
-        case 2: editUser(); break;
-        case 3: deleteUser(); break;
-        case 4: addUser(); break;
-        case 5: page(); break;
-        default: cout << "Invalid choice!"; getch(); adminPanel();
+        case 1: userManagementMenu(); break;
+        case 2: stockManagementMenu(); break;
+        case 3: adminProfile(); break;
+        case 4: page(); break;
+        default: cout<<"Invalid choice!"; getch(); adminPanel();
     }
 }
-
 
 
 int main()
